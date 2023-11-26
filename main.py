@@ -2,7 +2,7 @@ import pygame
 import math
 import time
 import tank
-
+import map
 
 def rot_center(image, angle, x, y):
     rotate_image = pygame.transform.rotate(image, angle)
@@ -23,7 +23,9 @@ clock = pygame.time.Clock()
 font = pygame.font.SysFont(None, 24)
 last_frame_timestamp = pygame.time.get_ticks()
 last_fps_update_timestamp = -999999
-fv4202 = tank.Tank()
+map = map.Map(screen)
+fv4202 = tank.Tank(map)
+
 done = False
 while not done:
     for event in pygame.event.get():
@@ -51,10 +53,13 @@ while not done:
             fv4202.fb_stop(frame_percent)
         if not pressed[pygame.K_a] and not pressed[pygame.K_d]:
             fv4202.lr_stop(frame_percent)
-
+        fv4202.aim(pygame.mouse.get_pos())
         fv4202.move(frame_percent)
+        map.center_on(fv4202)
         screen.fill((0, 0, 0))
-        screen.blit(fv4202.body[0], (fv4202.x + fv4202.body[1][0], fv4202.y + fv4202.body[1][1]))
+        screen.blit(map.transformed_img, (map.offset[0], map.offset[1]))
+        fv4202.render()
+        # screen.blit(fv4202.render()[0], (fv4202.x + fv4202.body[1][0] + map.offset[0], fv4202.y + fv4202.body[1][1] + map.offset[1]))
         if pygame.time.get_ticks() - last_fps_update_timestamp > 1000:
             last_fps_update_timestamp = pygame.time.get_ticks()
             fps = clock.get_fps()

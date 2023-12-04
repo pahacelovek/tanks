@@ -15,7 +15,6 @@ def custom_center_rotate(image, pos, angle, originPos):
     rotated_image_center = (pos[0] - rotated_offset.x, pos[1] - rotated_offset.y)
     rotated_image = pygame.transform.rotate(image, angle)
     rotated_image_rect = rotated_image.get_rect(center=rotated_image_center)
-
     return rotated_image, rotated_image_rect
 
 
@@ -54,6 +53,7 @@ class Tank():
         self.turret_rotate_center_orig = [496, 100]
         self.turret_orig_metric_width = 6
         self.turret_angle = 0
+        self.target_turret_angle = 0
         orig_size = self.turret_orig.get_size()
         vo_scale_coof = self.turret_orig_metric_width / self.map.viewport_metric_width
         map_target_width = self.map.viewport_size[0] * vo_scale_coof
@@ -69,8 +69,7 @@ class Tank():
     def render(self):
         self.map.screen.blit(self.body[0], (
         self.x + self.body[1][0] + self.map.offset[0], self.y + self.body[1][1] + self.map.offset[1]))
-        self.map.screen.blit(self.turret[0], (self.x + self.map.offset[0] - self.turret_rotate_center[0],
-                                              self.y + self.map.offset[1] - self.turret_rotate_center[1]))
+        self.map.screen.blit(self.turret[0], (self.turret[1][0], self.turret[1][1]))
 
     def forward(self, frame_percent):
         self.speed = self.speed + (self.front_acceleration * frame_percent)
@@ -102,16 +101,48 @@ class Tank():
         self.turn_angle = self.turn_angle + (self.turn_speed * frame_percent)
         self.x = self.x + self.speed * math.cos(self.turn_angle)
         self.y = self.y - self.speed * math.sin(self.turn_angle)
-        self.body = rot_center(self.body_orig, math.degrees(self.turn_angle), 10, 10)
+        self.body = rot_center(self.body_orig, math.degrees(self.turn_angle), 0, 0)
         # self.turret = rot_center(self.turret_orig, self.turret_angle, 10, 10)
-        self.turret = custom_center_rotate(self.turret_orig, (self.x, self.y), self.turret_angle, (211,42))
+
+        self.target_turret_angle = self.target_turret_angle + 90
+        self.turret_angle = self.turret_angle + 90
+
+        t_max = max(self.target_turret_angle, self.turret_angle)
+        t_min = min(self.target_turret_angle, self.turret_angle)
+
+        length = t_max-t_min
+
+        if 180 - length > 0:
+            large_mode = 1
+            #largest
+        else:
+            large_mode = 0
+            #least
+
+        if t_max == self.target_turret_angle:
+            change = -1
+        elif t_max == self.target_turret_angle:
+            change = 1
+        else:
+            change = 0
+        print(large_mode, change, self.target_turret_angle, self.turret_angle)
+
+        if large_mode == 1:
+            self.turret_angle += change
+        else:
+            self.turret_angle -= change
+
+        self.turret_angle = abs(self.turret_angle%360)
+
+        self.target_turret_angle = self.target_turret_angle - 90
+        self.turret_angle = self.turret_angle - 90
+        self.turret = custom_center_rotate(self.turret_orig, (self.x + self.map.offset[0], self.y + self.map.offset[1]), self.turret_angle, self.turret_rotate_center)
 
     def aim(self, coors):
-        dxy = [coors[0] - self.x, coors[1] - self.y]
+        dxy = [coors[0] - self.x - self.map.offset[0], coors[1] - self.y - self.map.offset[1]]
         if dxy[0] == 0:
             dxy[0] = 0.001
         if dxy[0] < 0:
-            self.turret_angle = -math.degrees(math.atan(dxy[1] / dxy[0]))
+            self.target_turret_angle = int(-math.degrees(math.atan(dxy[1] / dxy[0])))
         else:
-            self.turret_angle = -math.degrees(math.atan(dxy[1] / dxy[0])) + 180
-        # print(dxy, self.turret_angle)
+            self.target_turret_angle = int(-math.degrees(math.atan(dxy[1] / dxy[0])) + 180)

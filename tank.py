@@ -106,34 +106,15 @@ class Tank():
 
         self.target_turret_angle = self.target_turret_angle + 90
         self.turret_angle = self.turret_angle + 90
+        raznost = self.target_turret_angle - self.turret_angle
 
-        t_max = max(self.target_turret_angle, self.turret_angle)
-        t_min = min(self.target_turret_angle, self.turret_angle)
+        if (raznost < 0 and raznost > -180) or raznost > 180:
+            self.turret_angle -= 1
+        elif (raznost > 0 and raznost<= 180) or raznost < -180:
+            self.turret_angle += 1
 
-        length = t_max-t_min
-
-        if 180 - length > 0:
-            large_mode = 1
-            #largest
-        else:
-            large_mode = 0
-            #least
-
-        if t_max == self.target_turret_angle:
-            change = -1
-        elif t_max == self.target_turret_angle:
-            change = 1
-        else:
-            change = 0
-        print(large_mode, change, self.target_turret_angle, self.turret_angle)
-
-        if large_mode == 1:
-            self.turret_angle += change
-        else:
-            self.turret_angle -= change
-
-        self.turret_angle = abs(self.turret_angle%360)
-
+        self.turret_angle = abs(self.turret_angle % 360)
+        self.target_turret_angle = abs(self.target_turret_angle % 360)
         self.target_turret_angle = self.target_turret_angle - 90
         self.turret_angle = self.turret_angle - 90
         self.turret = custom_center_rotate(self.turret_orig, (self.x + self.map.offset[0], self.y + self.map.offset[1]), self.turret_angle, self.turret_rotate_center)

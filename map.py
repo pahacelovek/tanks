@@ -1,4 +1,5 @@
 import pygame
+import time
 
 
 class Map():
@@ -9,12 +10,21 @@ class Map():
         self.offset = [0, 0]
         self.orig_metric_width = 150
         self.viewport_metric_width = 30
-        orig_size = self.original_image.get_size()
+        self.bullets = []
+        self.orig_size = self.original_image.get_size()
+        self.calc_sizes()
+        self.last_recalc_timestamp = time.time()
+        self.recalc_cd = 0.01
+        self.recalc_step = 5
+        self.transform_coof = 1
+
+    def calc_sizes(self):
         vo_scale_coof = self.orig_metric_width / self.viewport_metric_width
         map_target_width = self.viewport_size[0] * vo_scale_coof
-        transform_coof = map_target_width / orig_size[0]
+        self.transform_coof = map_target_width / self.orig_size[0]
         self.transformed_img = pygame.transform.scale(self.original_image,
-                                                      (transform_coof * orig_size[0], transform_coof * orig_size[1]))
+                                                      (self.transform_coof * self.orig_size[0],
+                                                       self.transform_coof * self.orig_size[1]))
 
     def center_on(self, object):
         self.offset = [

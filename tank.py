@@ -1,3 +1,4 @@
+import time
 import pygame
 import math
 
@@ -16,6 +17,36 @@ def custom_center_rotate(image, pos, angle, originPos):
     rotated_image = pygame.transform.rotate(image, angle)
     rotated_image_rect = rotated_image.get_rect(center=rotated_image_center)
     return rotated_image, rotated_image_rect
+
+
+class Bullet():
+    def __init__(self, tank):
+        print("bullet created")
+        self.tank = tank
+        self.angle = math.radians(self.tank.turret_angle - 90)
+        self.x = self.tank.x + self.tank.map.offset[0] + math.sin(self.angle) * self.tank.turret_length
+        self.y = self.tank.y + self.tank.map.offset[1] + math.cos(self.angle) * self.tank.turret_length
+        self.start_speed = 1000
+        self.stop_speed = 10
+        self.detonate_speed = self.start_speed * 0.9
+        self.speed = self.start_speed
+        self.tank.map.bullets.append(self)
+
+    def detonate(self):
+        print("bullet detonated")
+        self.tank.map.bullets.remove(self)
+
+    def move(self, frame_percent):
+        self.speed = self.speed - (self.stop_speed * frame_percent)
+        if self.speed < self.detonate_speed:
+            self.detonate()
+            return
+        speed = self.speed * frame_percent
+        self.x = self.x + speed * math.sin(self.angle)
+        self.y = self.y + speed * math.cos(self.angle)
+
+    def render(self):
+        pygame.draw.circle(self.tank.map.screen, (0, 0, 0), (self.x, self.y), 5, 5)
 
 
 class Tank():
@@ -62,13 +93,17 @@ class Tank():
                                                   (transform_coof * orig_size[0], transform_coof * orig_size[1]))
         self.turret_rotate_center = [self.turret_rotate_center_orig[0] * transform_coof,
                                      self.turret_rotate_center_orig[1] * transform_coof]
-        print(self.turret_rotate_center)
+        self.turret_length = transform_coof * orig_size[0] - (
+                transform_coof * orig_size[0] - self.turret_rotate_center[0])
         self.body = self.body_orig
         self.turret = self.turret_orig
 
+        self.last_shot_timestamp = time.time()
+        self.shot_timedelta = 5
+
     def render(self):
         self.map.screen.blit(self.body[0], (
-        self.x + self.body[1][0] + self.map.offset[0], self.y + self.body[1][1] + self.map.offset[1]))
+            self.x + self.body[1][0] + self.map.offset[0], self.y + self.body[1][1] + self.map.offset[1]))
         self.map.screen.blit(self.turret[0], (self.turret[1][0], self.turret[1][1]))
 
     def forward(self, frame_percent):
@@ -102,22 +137,22 @@ class Tank():
         self.x = self.x + self.speed * math.cos(self.turn_angle)
         self.y = self.y - self.speed * math.sin(self.turn_angle)
         self.body = rot_center(self.body_orig, math.degrees(self.turn_angle), 0, 0)
-        # self.turret = rot_center(self.turret_orig, self.turret_angle, 10, 10)
-
         self.target_turret_angle = self.target_turret_angle + 90
         self.turret_angle = self.turret_angle + 90
-        raznost = self.target_turret_angle - self.turret_angle
-
-        if (raznost < 0 and raznost > -180) or raznost > 180:
+        self.turret_angle += math.degrees(self.turn_speed * frame_percent)
+        razn = self.target_turret_angle - self.turret_angle
+        if (razn < 0 and razn > -180) or razn > 180:
             self.turret_angle -= 1
-        elif (raznost > 0 and raznost<= 180) or raznost < -180:
+        elif (razn > 0 and razn <= 180) or razn < -180:
             self.turret_angle += 1
 
-        self.turret_angle = abs(self.turret_angle % 360)
-        self.target_turret_angle = abs(self.target_turret_angle % 360)
+        self.turret_angle = round(self.turret_angle % 360, 2)
+        self.target_turret_angle = round(self.target_turret_angle % 360, 2)
+
         self.target_turret_angle = self.target_turret_angle - 90
         self.turret_angle = self.turret_angle - 90
-        self.turret = custom_center_rotate(self.turret_orig, (self.x + self.map.offset[0], self.y + self.map.offset[1]), self.turret_angle, self.turret_rotate_center)
+        self.turret = custom_center_rotate(self.turret_orig, (self.x + self.map.offset[0], self.y + self.map.offset[1]),
+                                           self.turret_angle, self.turret_rotate_center)
 
     def aim(self, coors):
         dxy = [coors[0] - self.x - self.map.offset[0], coors[1] - self.y - self.map.offset[1]]
@@ -127,3 +162,11 @@ class Tank():
             self.target_turret_angle = int(-math.degrees(math.atan(dxy[1] / dxy[0])))
         else:
             self.target_turret_angle = int(-math.degrees(math.atan(dxy[1] / dxy[0])) + 180)
+
+    def fire(self):
+        if self.last_shot_timestamp + self.shot_timedelta <= time.time():
+            bullet = Bullet(self)
+            self.last_shot_timestamp = time.time()
+            print("Выстрел!")
+        else:
+            print("Еще перезаряжаюсь")
